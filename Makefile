@@ -1,0 +1,20 @@
+export OLLAMA_MODELS=$(HOME)/goinfre/.models
+
+run:
+	@nohup ollama serve > ollama.log 2>&1 &
+
+install:
+	uv sync
+	ollama pull "qwen3:0.6b"
+
+debug:
+	uv run python -m pdb src
+
+flake:
+	uv run python -m flake8
+
+lint: flake
+	uv run python -m mypy
+
+
+.PHONY := run debug install lint clean fclean
