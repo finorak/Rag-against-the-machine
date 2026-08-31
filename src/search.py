@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Any
 
@@ -8,21 +9,27 @@ from .model import (
     MinimalSource,
     UnansweredQuestion,
 )
-from .utils import get_minimal_sources, get_path
+from .utils import get_minimal_sources
 
 
 class SearchEngine:
-    def __init__(self) -> None:
-        self.index_dir: Path = Path(get_path("data", "processed", "bm_index"))
+    def __init__(self, index_dir: Path, chunk_file: Path) -> None:
+        self.index_dir: Path = index_dir
+        self.chunk_file: Path = chunk_file
         self.retriever: BM25 | None = None
+        self.search_cache: dict[str, Any] = {}
 
-    def search(self, query: str, k: int, chunk_file: Path) -> dict[str, Any]:
+    def search(self, query: str, k: int) -> dict[str, Any]:
+        cache_key = f"{query}: {k}"
+        cache_value = self.search_cache.get(cache_key)
+        if cache_value:
+            return json.loads(cache_value)
         unanswered_question = UnansweredQuestion(question=query)
         if self.retriever is None:
             self.retriever = BM25.load(
                     self.index_dir, load_corpus=True, mmap=True
                     )
-        minimal_sources = get_minimal_sources(chunk_file)
+        minimal_sources = get_minimal_sources(self.chunk_file)
         results, scores = self.retriever.retrieve(
                 tokenize(query.replace("_", " ")), k=k,
                 corpus=minimal_sources, sorted=True
@@ -35,6 +42,7 @@ class SearchEngine:
                 question_id=unanswered_question.question_id,
                 question=unanswered_question.question,
                 retrieved_sources=retrieved_sources)
+        self.search_cache[cache_key] = cache_value
         return minimal_search_results.model_dump()
 
     def search_dataset(

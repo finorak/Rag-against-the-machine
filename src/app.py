@@ -12,23 +12,21 @@ from .utils import get_path
 class App:
     def __init__(self) -> None:
         data_path: str = get_path("data", "raw")
+        self.processed_dir: Path = Path(get_path("data", "raw", "processed"))
         self.chunk_file: Path = Path("data", "processed", "chunk.json")
-        self.index_engine = IndexEngine(data_path, self.chunk_file)
-        self.search_engine = SearchEngine()
-        self.answer_engine = AnswerEngine()
-        self.search_cache: dict[str, Any] = {}
-        self.answer_cache: dict[str, Any] = {}
+        self.index_dir: Path = Path(get_path("data", "processed", "bm_index"))
+        self.index_engine = IndexEngine(
+                data_path, self.processed_dir,
+                self.index_dir, self.chunk_file
+                )
+        self.search_engine = SearchEngine(self.index_dir, self.chunk_file)
+        self.answer_engine = AnswerEngine(self.search_engine)
 
     def index(self, max_chunk_size: int = 2000) -> None:
         self.index_engine.index(max_chunk_size)
 
     def search(self, query: str, k: int = 10) -> dict[str, Any]:
-        cache_key = f"{query}: {k}"
-        cache_value = self.search_cache.get(cache_key)
-        if cache_value:
-            return json.loads(cache_value)
-        search_results = self.search_engine.search(query, k, self.chunk_file)
-        self.search_cache[cache_key] = cache_value
+        search_results = self.search_engine.search(query, k)
         return search_results
 
     def search_dataset(
@@ -41,12 +39,7 @@ class App:
         return search_dataset_results
 
     def answer(self, query: str, k: int = 10) -> dict[str, Any]:
-        cache_key = "{query}: {k}"
-        cache_value = self.answer_cache.get(cache_key)
-        if cache_value:
-            return json.loads(cache_value)
         response_results = self.answer_engine.answer(query, k)
-        self.answer_cache[cache_key] = cache_value
         return response_results
 
     def answer_dataset(

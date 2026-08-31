@@ -10,15 +10,19 @@ from langchain_text_splitters import (
 )
 
 from .model import MinimalSource
-from .utils import get_path
 
 
 class IndexEngine:
-    def __init__(self, data_path: str, chunk_file: Path) -> None:
-        self.data_path = Path(data_path)
+    def __init__(
+            self, data_path: str,
+            processed_dir: Path,
+            index_dir: Path,
+            chunk_file: Path
+    ) -> None:
+        self.data_path: Path = Path(data_path)
+        self.processed_dir: Path = processed_dir
         self.chunk_file: Path = chunk_file
-        self.processed_dir = Path(get_path("data", "processed"))
-        self.index_dir: Path = Path(get_path("data", "processed", "bm_index"))
+        self.index_dir: Path = index_dir
         self.retriever: BM25 = BM25()
         self.sources: list[dict[str, Any]] = []
 
