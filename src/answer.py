@@ -18,7 +18,7 @@ class AnswerEngine:
         cache_key = "{query}: {k}"
         cache_value = self.cache.get(cache_key)
         if cache_value:
-            return json.loads(cache_value)
+            return cache_value
         unanswered_question = UnansweredQuestion(question=query)
         search_results = self.search_engine.search(query, k)
         sources: list[str] = [
@@ -27,7 +27,6 @@ class AnswerEngine:
                 ]
         prompt = self._prompt_augmenter(query, sources)
         response = self.model.invoke(prompt)
-        self.cache[cache_key] = response.content
         answered_question = AnsweredQuestion(
                 question_id=unanswered_question.question_id,
                 question=query,
@@ -37,6 +36,7 @@ class AnswerEngine:
                     ],
                 answer=str(response.content)
                 )
+        self.cache[cache_key] = answered_question.model_dump()
         return answered_question.model_dump()
 
     def answer_dataset(
