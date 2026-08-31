@@ -33,7 +33,7 @@ class App:
             self, dataset_path: str,
             save_directory: str,
             k: int = 10
-    ) -> list[dict[str, Any]]:
+    ) -> dict[str, Any]:
         search_dataset_results = self.search_engine.search_dataset(
                 dataset_path, save_directory, k)
         return search_dataset_results
@@ -45,5 +45,5 @@ class App:
     def answer_dataset(
             self, student_search_results_path: str,
             dataset_path: str
-    ) -> list[dict[str, Any]]:
+    ) -> dict[str, Any]:
         ...

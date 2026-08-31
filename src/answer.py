@@ -10,12 +10,13 @@ from .search import SearchEngine
 class AnswerEngine:
     def __init__(self, search_engine: SearchEngine, model_name: str = "qwen3:0.6b") -> None:
         self.search_engine = search_engine
-        self.answer_cache: dict[str, Any] = {}
+        self.cache: dict[str, Any] = {}
         self.model = ChatOllama(model=model_name)
 
     def answer(self, query: str, k: int) -> dict[str, Any]:
+        query = query.replace("_", " ").strip()
         cache_key = "{query}: {k}"
-        cache_value = self.answer_cache.get(cache_key)
+        cache_value = self.cache.get(cache_key)
         if cache_value:
             return json.loads(cache_value)
         unanswered_question = UnansweredQuestion(question=query)
@@ -26,7 +27,7 @@ class AnswerEngine:
                 ]
         prompt = self._prompt_augmenter(query, sources)
         response = self.model.invoke(prompt)
-        self.answer_cache[cache_key] = response.content
+        self.cache[cache_key] = response.content
         answered_question = AnsweredQuestion(
                 question_id=unanswered_question.question_id,
                 question=query,
