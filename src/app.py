@@ -1,6 +1,8 @@
 import json
 from typing import Any
 
+from bm25s import Path
+
 from .answer import AnswerEngine
 from .index import IndexEngine
 from .search import SearchEngine
@@ -10,7 +12,8 @@ from .utils import get_path
 class App:
     def __init__(self) -> None:
         data_path: str = get_path("data", "raw")
-        self.index_engine = IndexEngine(data_path)
+        self.chunk_file: Path = Path("data", "processed", "chunk.json")
+        self.index_engine = IndexEngine(data_path, self.chunk_file)
         self.search_engine = SearchEngine()
         self.answer_engine = AnswerEngine()
         self.search_cache: dict[str, Any] = {}
@@ -24,7 +27,7 @@ class App:
         cache_value = self.search_cache.get(cache_key)
         if cache_value:
             return json.loads(cache_value)
-        search_results = self.search_engine.search(query, k)
+        search_results = self.search_engine.search(query, k, self.chunk_file)
         self.search_cache[cache_key] = cache_value
         return search_results
 
