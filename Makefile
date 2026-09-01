@@ -11,10 +11,9 @@ debug:
 	uv run python -m pdb src
 
 flake:
-	uv run python -m flake8
+	uv run python -m flake8 src
 
 lint: flake
-	uv run python -m mypy
-
+	uv run python -m mypy src
 
 .PHONY := run debug install lint clean fclean

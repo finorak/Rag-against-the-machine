@@ -6,7 +6,6 @@ our data, and to facilitate data validation.
 
 
 import uuid
-from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -46,13 +45,6 @@ class UnansweredQuestion(BaseModel):
     question_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     question: str
 
-    def keys(self) -> list[str]:
-        return ["question_id", "question"]
-
-    def __gettitem__(self, key: str) -> Any:
-        if key in self.keys():
-            return getattr(self, key)
-        raise KeyError(key)
 
 class AnsweredQuestion(UnansweredQuestion):
     """Class to store answered question.

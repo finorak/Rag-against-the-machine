@@ -1,3 +1,6 @@
+"""Search engine module."""
+
+
 import json
 from pathlib import Path
 from typing import Any
@@ -14,13 +17,46 @@ from .utils import get_minimal_sources, get_path
 
 
 class SearchEngine:
+    """Search engine class.
+
+    This help us retrieve minimal sources to help
+    us answer the user's query.
+    """
+
     def __init__(self, index_dir: Path, chunk_file: Path) -> None:
+        """Initiate Search Engine instance.
+
+        Args:
+            index_dir: path to where the indexe folder is located.
+            chunk_file: path to where the chunk file is located.
+        """
         self.index_dir: Path = index_dir
         self.chunk_file: Path = chunk_file
         self.retriever: BM25 | None = None
         self.cache: dict[str, dict[str, Any]] = {}
 
-    def search(self, query: str, k: int, question_id: str = "") -> dict[str, Any]:
+    def search(
+            self, query: str, k: int,
+            question_id: str = ""
+    ) -> dict[str, Any] | Any:
+        """Search user's query.
+
+        Searching best sources that match the query.
+        Insead of recompute everytime, we cache the query, k
+        values into a string and see if it's already in
+        the cache, if yes, we return the retrieved_sources imediatly,
+        this avoid redoing the same question everytime for example,
+        as we only embed the query a single time and just retrieve the
+        result of the searched before.
+
+        Args:
+            query: What the user asked for.
+            k: top-k result to retrieve.
+            question_id: the id of the question if it is \
+provided.
+        Returns:
+            search_results: the result of our query.
+        """
         query = query.replace("_", " ").strip()
         cache_key = f"{query}: {k}"
         cache_value = self.cache.get(cache_key)
@@ -52,13 +88,25 @@ class SearchEngine:
     def search_dataset(
             self, dataset_path: str,
             save_directory: str, k: int
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | Any:
+        """Execute a search in a batch.
+
+        Using the provided dataset we query it and
+        execute a search for each element of the dataset.
+
+        Args:
+            dataset_path: where the dataset is located.
+            save_directory: where to save the results.
+        search_results: the result of our batch query.
+        """
         with open(dataset_path, mode="r", encoding="utf-8") as f:
             raw_data = json.load(f)
         rag_questions = raw_data['rag_questions']
         search_lst: list[MinimalSearchResults] = []
         for prompt in rag_questions:
-            search_results = self.search(prompt['question'], k, prompt['question_id'])
+            search_results = self.search(
+                    prompt['question'], k, prompt['question_id']
+                    )
             sources = search_results['retrieved_sources']
             minimal_sources = [
                     MinimalSource(**data)
@@ -71,12 +119,15 @@ class SearchEngine:
                     )
             search_lst.append(minimal_search)
         student_search_results = StudentSearchResults(
-                search_results=search_lst,
-                k=k
+                search_results=search_lst, k=k
                 )
         data_path: Path = Path(dataset_path)
         save_path: Path = Path(save_directory)
-        save_file: Path = Path(get_path(save_path._raw_paths[0], data_path.name))
+        save_file: Path = Path(
+                get_path(
+                    str(save_path), data_path.name
+                    )
+                )
         save_file.parent.mkdir(parents=True, exist_ok=True)
         with open(save_file, mode="w", encoding="utf-8") as f:
             json.dump(student_search_results.model_dump(), fp=f, indent=4)
