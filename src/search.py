@@ -3,6 +3,7 @@
 
 import json
 from pathlib import Path
+import sys
 from typing import Any
 
 from bm25s import BM25, tokenize
@@ -58,6 +59,9 @@ provided.
             search_results: the result of our query.
         """
         query = query.replace("_", " ").strip()
+        if not query or k < 0:
+            print("Query can't be empty or k < 0", file=sys.stderr)
+            return {}
         cache_key = f"{query}: {k}"
         cache_value = self.cache.get(cache_key)
         if cache_value:
@@ -107,6 +111,8 @@ provided.
             search_results = self.search(
                     prompt['question'], k, prompt['question_id']
                     )
+            if not search_results:
+                continue
             sources = search_results['retrieved_sources']
             minimal_sources = [
                     MinimalSource(**data)

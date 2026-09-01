@@ -23,4 +23,5 @@ def query(query: str, k: int) -> Any:
         response = rag_application.answer(query, k)
         return response
     except Exception as e:
+        print(e)
         return e.__str__()

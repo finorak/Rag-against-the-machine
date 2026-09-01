@@ -8,6 +8,7 @@ those classes.
 """
 
 
+import sys
 from typing import Any
 
 from bm25s import Path
@@ -24,14 +25,14 @@ class App:
     def __init__(self) -> None:
         """Initiate an App instance."""
         data_path: str = get_path("data", "raw")
-        self.processed_dir: Path = Path(get_path("data", "raw", "processed"))
-        self.chunk_file: Path = Path("data", "processed", "chunk.json")
-        self.index_dir: Path = Path(get_path("data", "processed", "bm_index"))
+        processed_dir: Path = Path(get_path("data", "raw", "processed"))
+        chunk_file: Path = Path("data", "processed", "chunk.json")
+        index_dir: Path = Path(get_path("data", "processed", "bm_index"))
         self.index_engine = IndexEngine(
-                data_path, self.processed_dir,
-                self.index_dir, self.chunk_file
+                data_path, processed_dir,
+                index_dir, chunk_file
                 )
-        self.search_engine = SearchEngine(self.index_dir, self.chunk_file)
+        self.search_engine = SearchEngine(index_dir, chunk_file)
         self.answer_engine = AnswerEngine(self.search_engine)
 
     def index(self, max_chunk_size: int = 2000) -> None:
@@ -41,6 +42,9 @@ class App:
             max_chunk_size: the chunk size for our corpus \
 the default is `2000`
         """
+        if 200 < max_chunk_size or max_chunk_size > 2000:
+            print("Index size must be between 200 and 2000", file=sys.stderr)
+            sys.exit(1)
         self.index_engine.index(max_chunk_size)
 
     def search(self, query: str, k: int = 10) -> dict[str, Any] | Any:

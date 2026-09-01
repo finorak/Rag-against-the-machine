@@ -2,6 +2,7 @@
 
 
 import json
+import sys
 from typing import Any
 
 from langchain_ollama import ChatOllama
@@ -45,7 +46,10 @@ to help us retrieve the best source to respond the query.
             response: (dict[str, Any]) retrieved sources and answer.
         """
         query = query.replace("_", " ").strip()
-        cache_key = "{query}: {k}"
+        if not query or k < 0:
+            print("Query can't be empty or k < 0", file=sys.stderr)
+            return {}
+        cache_key = f"{query}: {k}"
         cache_value = self.cache.get(cache_key)
         if cache_value:
             return cache_value
@@ -83,6 +87,11 @@ to help us retrieve the best source to respond the query.
         Returns:
             restults: a dict containing the search resutls.
         """
+        with open(
+                student_search_results_path,
+                mode="r", encoding="utf-8"
+        ) as f:
+            raw_data = json.load(f)
         return {}
 
     def _prompt_augmenter(self, query: str, sources: list[str]) -> str:
