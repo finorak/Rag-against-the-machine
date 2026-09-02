@@ -19,3 +19,5 @@ if __name__ == "__main__":
         main()
     except ConnectionError as e:
         print(e, file=sys.stderr)
+    except Exception as e:
+        print(e, file=sys.stderr)
