@@ -16,6 +16,9 @@ flake:
 lint: flake
 	uv run python -m mypy src
 
+lint-strict: flake
+	uv run python -m mypy src --strict
+
 clean:
 	find . -name "*.pyc" -exec rm -rf {} +
 	find . -type d \( -name "__pycache__" -o -name ".mypy_cache" \) -exec rm -rf {} +
@@ -23,4 +26,4 @@ clean:
 fclean: clean
 	rm -rf .venv
 
-.PHONY := run debug install lint clean fclean
+.PHONY := run debug install lint clean fclean lint-strict

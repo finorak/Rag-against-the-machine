@@ -129,7 +129,7 @@ the default is `2000`
     def evaluate(
             self, student_search_results_path: str,
             dataset_path: str
-    ) -> dict[str, float]:
+    ) -> dict[str, float] | Any:
         """Evaluate search results based on ground truth.
 
         Doing a simple recal@k calculation on the search results
