@@ -1,7 +1,7 @@
 """Index engine module."""
 
 
-import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +13,8 @@ from langchain_text_splitters import (
 )
 
 from .model import MinimalSource
+from .semantic import SemanticEngine
+from .utils import secure_open
 
 
 class IndexEngine:
@@ -26,7 +28,8 @@ class IndexEngine:
             self, data_path: str,
             processed_dir: Path,
             index_dir: Path,
-            chunk_file: Path
+            chunk_file: Path,
+            semantic_engine: SemanticEngine
     ) -> None:
         """Initialize an IndexEngine instance.
 
@@ -41,9 +44,10 @@ class IndexEngine:
         self.chunk_file: Path = chunk_file
         self.index_dir: Path = index_dir
         self.retriever: BM25 = BM25()
+        self.semantic_engine = semantic_engine
         self.sources: list[dict[str, Any]] = []
 
-    def index(self, max_chunk_size: int) -> None:
+    def index(self, max_chunk_size: int, hybrid_search: bool) -> None:
         """Index the corpuse.
 
         Args:
@@ -51,9 +55,12 @@ class IndexEngine:
         """
         self._explore(max_chunk_size)
         self.chunk_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.chunk_file, mode="w", encoding="utf-8") as f:
-            json.dump(self.sources, fp=f, indent=4)
+        secure_open(self.chunk_file, mode="w", data=self.sources)
         self.index_dir.parent.mkdir(parents=True, exist_ok=True)
+        if hybrid_search:
+            self.semantic_engine.embed(
+                    [source['chunk'] for source in self.sources]
+                    )
         self._retriver(self.sources)
 
     def _explore(self, max_chunk_size: int) -> None:
@@ -93,8 +100,12 @@ class IndexEngine:
         Returns:
             chunks: a list of chunk `Document`
         """
-        with open(file_path, mode="r", encoding="utf-8") as f:
-            data = f.read()
+        try:
+            with open(file_path, mode="r", encoding="utf-8") as f:
+                data = f.read()
+        except Exception as e:
+            print(e, file=sys.stderr)
+            sys.exit(1)
         text_splitter = RecursiveCharacterTextSplitter.from_language(
                 language=language,
                 chunk_size=max_chunk_size,
@@ -142,4 +153,8 @@ chunk.
                 for source in sources
                 ]
         self.retriever.index(tokenize(corpuse), show_progress=True)
-        self.retriever.save(self.index_dir, corpus=corpuse)
+        try:
+            self.retriever.save(self.index_dir, corpus=corpuse)
+        except Exception as e:
+            print(e, file=sys.stderr)
+            sys.exit(1)

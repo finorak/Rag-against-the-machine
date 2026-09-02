@@ -3,12 +3,21 @@
 
 import json
 import sys
+from pathlib import Path
 from typing import Any
 
 from langchain_ollama import ChatOllama
+from tqdm.std import tqdm
 
-from .model import AnsweredQuestion, MinimalSource, UnansweredQuestion
+from .model import (
+    AnsweredQuestion,
+    MinimalAnswer,
+    MinimalSource,
+    StudentSearchResultsAndAnswer,
+    UnansweredQuestion,
+)
 from .search import SearchEngine
+from .utils import get_path, secure_answer, secure_open
 
 
 class AnswerEngine:
@@ -34,7 +43,10 @@ to help us retrieve the best source to respond the query.
         self.cache: dict[str, Any] = {}
         self.model = ChatOllama(model=model_name)
 
-    def answer(self, query: str, k: int) -> dict[str, Any] | Any:
+    def answer(
+            self, query: str, k: int,
+            hybrid_search: bool
+    ) -> dict[str, Any] | Any:
         """Answer user's query.
 
         We answer the user's query using the `qwen3:0.6` model
@@ -71,7 +83,7 @@ to help us retrieve the best source to respond the query.
                 answer=str(response.content)
                 )
         self.cache[cache_key] = answered_question.model_dump()
-        return answered_question.model_dump()
+        return self.cache[cache_key]
 
     def answer_dataset(
             self, student_search_results_path: str,
@@ -87,12 +99,42 @@ to help us retrieve the best source to respond the query.
         Returns:
             restults: a dict containing the search resutls.
         """
-        with open(
-                student_search_results_path,
-                mode="r", encoding="utf-8"
-        ) as f:
-            raw_data = json.load(f)
-        return {}
+        raw_data = secure_open(student_search_results_path)
+        results = raw_data.get('search_results')
+        k = raw_data.get("k")
+        if not results or not k:
+            print("k or restults missing", file=sys.stderr)
+            sys.exit(1)
+        search_results: list[MinimalAnswer] = []
+        for search in tqdm(results, desc="Answering dataset"):
+            minimal_sources = [
+                    MinimalSource(**data)
+                    for data in search['retrieved_sources']
+                    ]
+            prompt = self._prompt_augmenter(
+                    search['question'],
+                    [source.chunk for source in minimal_sources]
+                    )
+            answer = secure_answer(self.model, prompt)
+            minimal_answer = MinimalAnswer(
+                    question_id=search['question_id'],
+                    question=search['question'],
+                    retrieved_sources=minimal_sources,
+                    answer=answer
+                    )
+            search_results.append(minimal_answer)
+        student_search_results_and_answer = StudentSearchResultsAndAnswer(
+                search_results=search_results,
+                k=k
+                )
+        file_name = Path(student_search_results_path).name
+        save_file: Path = Path(get_path(dataset_path, file_name))
+        save_file.parent.mkdir(parents=True, exist_ok=True)
+        secure_open(
+                save_file, mode="w",
+                data=student_search_results_and_answer.model_dump()
+                )
+        return student_search_results_and_answer.model_dump()
 
     def _prompt_augmenter(self, query: str, sources: list[str]) -> str:
         context: str = ""

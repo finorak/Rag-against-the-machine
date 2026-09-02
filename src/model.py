@@ -23,12 +23,16 @@ class MinimalSource(BaseModel):
         where the chunk start
     last_character_index: int
         where the chunk end
+    bm_rank: index of the source in the bm rank results.
     """
 
     file_path: str = Field(...)
     chunk: str = Field(...)
     first_character_index: int = Field(...)
     last_character_index: int = Field(...)
+    bm_rank: float = Field(default=0.0, exclude=True)
+    vector_rank: float = Field(default=0.0, exclude=True)
+    score: float = Field(default=0.0, exclude=True)
 
 
 class UnansweredQuestion(BaseModel):

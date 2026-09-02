@@ -1,12 +1,12 @@
 """Search engine module."""
 
 
-import json
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Any
 
 from bm25s import BM25, tokenize
+from tqdm.std import tqdm
 
 from .model import (
     MinimalSearchResults,
@@ -14,7 +14,8 @@ from .model import (
     StudentSearchResults,
     UnansweredQuestion,
 )
-from .utils import get_minimal_sources, get_path
+from .semantic import SemanticEngine
+from .utils import get_minimal_sources, get_path, secure_open
 
 
 class SearchEngine:
@@ -24,7 +25,11 @@ class SearchEngine:
     us answer the user's query.
     """
 
-    def __init__(self, index_dir: Path, chunk_file: Path) -> None:
+    def __init__(
+            self, index_dir: Path,
+            chunk_file: Path,
+            semantic_engine: SemanticEngine
+    ) -> None:
         """Initiate Search Engine instance.
 
         Args:
@@ -35,10 +40,12 @@ class SearchEngine:
         self.chunk_file: Path = chunk_file
         self.retriever: BM25 | None = None
         self.cache: dict[str, dict[str, Any]] = {}
+        self.semantic_engine = semantic_engine
 
     def search(
             self, query: str, k: int,
-            question_id: str = ""
+            question_id: str = "",
+            hybrid_search: bool = False
     ) -> dict[str, Any] | Any:
         """Search user's query.
 
@@ -74,6 +81,10 @@ provided.
                     self.index_dir, load_corpus=True, mmap=True
                     )
         minimal_sources = get_minimal_sources(self.chunk_file)
+        if hybrid_search:
+            self.semantic_engine.search(
+                    query, k, minimal_sources
+                    )
         results, scores = self.retriever.retrieve(
                 tokenize(query), k=k,
                 corpus=minimal_sources, sorted=True
@@ -81,6 +92,7 @@ provided.
         retrieved_sources: list[MinimalSource] = []
         for i in range(scores.shape[1]):
             match_source = results[0, i]
+            match_source.bm_rank = i + 1
             retrieved_sources.append(match_source)
         minimal_search_results = MinimalSearchResults(
                 question_id=unanswered_question.question_id,
@@ -91,7 +103,8 @@ provided.
 
     def search_dataset(
             self, dataset_path: str,
-            save_directory: str, k: int
+            save_directory: str, k: int,
+            hybrid_search: bool = False
     ) -> dict[str, Any] | Any:
         """Execute a search in a batch.
 
@@ -103,13 +116,14 @@ provided.
             save_directory: where to save the results.
         search_results: the result of our batch query.
         """
-        with open(dataset_path, mode="r", encoding="utf-8") as f:
-            raw_data = json.load(f)
+        raw_data = secure_open(dataset_path)
         rag_questions = raw_data['rag_questions']
         search_lst: list[MinimalSearchResults] = []
-        for prompt in rag_questions:
+        for prompt in tqdm(rag_questions, desc="Retrieve dataset"):
             search_results = self.search(
-                    prompt['question'], k, prompt['question_id']
+                    prompt['question'], k,
+                    prompt['question_id'],
+                    hybrid_search
                     )
             if not search_results:
                 continue
@@ -135,6 +149,8 @@ provided.
                     )
                 )
         save_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(save_file, mode="w", encoding="utf-8") as f:
-            json.dump(student_search_results.model_dump(), fp=f, indent=4)
+        secure_open(
+                save_file, mode="w",
+                data=student_search_results.model_dump()
+                )
         return student_search_results.model_dump()
