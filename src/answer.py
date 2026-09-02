@@ -62,8 +62,8 @@ to help us retrieve the best source to respond the query.
         Returns:
             response: (dict[str, Any]) retrieved sources and answer.
         """
-        query = query.replace("_", " ").strip()
-        if not query or k < 0:
+        query = query.strip().replace("_", " ").strip()
+        if not query or k <= 0:
             print("Query can't be empty or k < 0", file=sys.stderr)
             return {}
         cache_key = f"{query}: {k} {hybrid_search}"
@@ -80,7 +80,7 @@ to help us retrieve the best source to respond the query.
                 for data in search_results['retrieved_sources']
                 ]
         prompt = self._prompt_augmenter(query, sources)
-        response = self.model.invoke(prompt)
+        response = secure_answer(self.model, prompt)
         answered_question = AnsweredQuestion(
                 question_id=unanswered_question.question_id,
                 question=query,
@@ -88,7 +88,7 @@ to help us retrieve the best source to respond the query.
                     MinimalSource(**data)
                     for data in search_results['retrieved_sources']
                     ],
-                answer=str(response.content)
+                answer=response
                 )
         self.cache[cache_key] = answered_question.model_dump()
         return self.cache[cache_key]

@@ -66,8 +66,8 @@ provided.
         Returns:
             search_results: the result of our query.
         """
-        query = query.replace("_", " ").strip()
-        if not query or k < 0:
+        query = query.strip().replace("_", " ").strip()
+        if not query or k <= 0:
             print("Query can't be empty or k < 0", file=sys.stderr)
             return {}
         cache_key = f"{query}: {k} - {hybrid_search}"
