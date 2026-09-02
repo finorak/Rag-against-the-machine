@@ -41,7 +41,11 @@ to help us retrieve the best source to respond the query.
         """
         self.search_engine = search_engine
         self.cache: dict[str, Any] = {}
-        self.model = ChatOllama(model=model_name)
+        try:
+            self.model = ChatOllama(model=model_name)
+        except Exception as e:
+            print(e, file=sys.stderr)
+            sys.exit(1)
 
     def answer(
             self, query: str, k: int,
@@ -54,6 +58,7 @@ to help us retrieve the best source to respond the query.
         Args:
             query: (str) the user's request.
             k: (int) top-k to use to answer the query.
+            hybrid_search: weather to perform an hybrid_search
         Returns:
             response: (dict[str, Any]) retrieved sources and answer.
         """
@@ -61,12 +66,15 @@ to help us retrieve the best source to respond the query.
         if not query or k < 0:
             print("Query can't be empty or k < 0", file=sys.stderr)
             return {}
-        cache_key = f"{query}: {k}"
+        cache_key = f"{query}: {k} {hybrid_search}"
         cache_value = self.cache.get(cache_key)
         if cache_value:
             return cache_value
         unanswered_question = UnansweredQuestion(question=query)
-        search_results = self.search_engine.search(query, k)
+        search_results = self.search_engine.search(
+                query=query, k=k,
+                hybrid_search=hybrid_search
+                )
         sources: list[str] = [
                 data['chunk']
                 for data in search_results['retrieved_sources']

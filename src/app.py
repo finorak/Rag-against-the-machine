@@ -88,7 +88,8 @@ the default is `2000`
             search_result: the results of our retrieval.
         """
         search_dataset_results = self.search_engine.search_dataset(
-                dataset_path, save_directory, k)
+                dataset_path, save_directory, k, hybrid_search=hybrid
+                )
         return search_dataset_results
 
     def answer(

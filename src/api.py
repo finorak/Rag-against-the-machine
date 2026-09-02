@@ -12,15 +12,16 @@ rag_application = App()
 
 
 @app.post("/answer")
-def query(query: str, k: int) -> Any:
+def query(query: str, k: int, hybrid: bool = False) -> Any:
     """Answer api to expose the rag answer API.
 
     Args:
         query: the user's request.
         k: top-k used for retrieval.
+        hybrid: weather to perform an hybrid search or not.
     """
     try:
-        response = rag_application.answer(query, k)
+        response = rag_application.answer(query, k, hybrid)
         return response
     except Exception as e:
         print(e)

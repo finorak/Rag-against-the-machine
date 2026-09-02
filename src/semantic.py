@@ -1,6 +1,7 @@
 """Hybrid and semantical search module."""
 
 
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -8,7 +9,7 @@ from bm25s import Any
 from sentence_transformers import SentenceTransformer
 
 from .model import MinimalSource
-from .utils import get_minimal_sources, get_path, secure_embed
+from .utils import get_path, secure_embed
 
 MODEL_NAME = "sentence-transformers/paraphrase-MiniLM-L3-v2"
 EMBEDDIN_DIR = Path(get_path("data", "processed", "database.npy"))
@@ -22,15 +23,22 @@ class SemanticEngine:
     """
 
     def __init__(
-            self, chunk_file: Path, K: int = 60
-    ) -> None:
+            self, chunk_file: Path, K: int = 60,
+            alpha: float = 0.75, beta: float = 0.5) -> None:
         """Initiate an hybrid instance class."""
-        self.model = SentenceTransformer(model_name_or_path=MODEL_NAME)
+        try:
+            self.model = SentenceTransformer(model_name_or_path=MODEL_NAME)
+        except Exception as e:
+            print(e, file=sys.stderr)
+            sys.exit(1)
         self.chunk_file = chunk_file
         self.K = K
+        self.alpha = alpha
+        self.beta = beta
 
     def embed(self, corpus: list[str]) -> None:
         """Embed our corpuse."""
+        EMBEDDIN_DIR.parent.mkdir(parents=True, exist_ok=True)
         if EMBEDDIN_DIR.exists():
             self.vector_matrix = np.load(EMBEDDIN_DIR)
         else:
@@ -83,7 +91,8 @@ class SemanticEngine:
         """
         sources: list[MinimalSource] = []
         for source in minimal_sources:
-            bm_score = 1 / (self.K + source.bm_rank)
-            vector_score = 1 / (self.K + source.vector_rank)
+            bm_score = self.alpha / (self.K + source.bm_rank)
+            vector_score = self.beta / (self.K + source.vector_rank)
             source.score = bm_score + vector_score
+            sources.append(source)
         return sorted(sources, key=lambda source: -source.score)

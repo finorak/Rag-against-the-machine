@@ -62,6 +62,7 @@ class SearchEngine:
             k: top-k result to retrieve.
             question_id: the id of the question if it is \
 provided.
+            hybrid_search: weather to perform an hybrid_search
         Returns:
             search_results: the result of our query.
         """
@@ -69,7 +70,7 @@ provided.
         if not query or k < 0:
             print("Query can't be empty or k < 0", file=sys.stderr)
             return {}
-        cache_key = f"{query}: {k}"
+        cache_key = f"{query}: {k} - {hybrid_search}"
         cache_value = self.cache.get(cache_key)
         if cache_value:
             return cache_value
@@ -94,6 +95,10 @@ provided.
             match_source = results[0, i]
             match_source.bm_rank = i + 1
             retrieved_sources.append(match_source)
+        if hybrid_search:
+            retrieved_sources = self.semantic_engine.rrf(
+                    retrieved_sources
+                    )
         minimal_search_results = MinimalSearchResults(
                 question_id=unanswered_question.question_id,
                 question=unanswered_question.question,
@@ -104,7 +109,7 @@ provided.
     def search_dataset(
             self, dataset_path: str,
             save_directory: str, k: int,
-            hybrid_search: bool = False
+            hybrid_search: bool
     ) -> dict[str, Any] | Any:
         """Execute a search in a batch.
 
@@ -114,6 +119,7 @@ provided.
         Args:
             dataset_path: where the dataset is located.
             save_directory: where to save the results.
+            hybrid_search: weather to perform an hybrid_search
         search_results: the result of our batch query.
         """
         raw_data = secure_open(dataset_path)
