@@ -39,6 +39,7 @@ To launch this project, you can choose between those
 three method bellow:
 
 But before everything, you should run the command bellow.
+
 ```bash
 
 export UV_CACHE_DIR="$HOME/goinfre/.cache/uv"
@@ -67,8 +68,8 @@ answer query`
 
 ### **Api**: For this, you can access only two APIs for now
 
-- `curl -X POST "http://127.0.0.1:8000/answer" -G --data-urlencode
-"q=What is VLLM ?"t` but you must first run the command `python -m uvicorn src.api:app`
+- `curl -X POST "<http://127.0.0.1:8000/answer>" -G --data-urlencode -
+"{q='What is VLLM ?'}"` but you must first run the command `uvicorn src.api:app`
 - Or accessing it via the _Swagger UI_ provided by FastApi.
 
 ## Resource
@@ -156,11 +157,7 @@ To see if my implementation is doing in the direction I wanted to
 
 ### Recall@k
 
-As I change the value of the chunk in my implementation i saw that
-the result in my recall didn't change that much. So as i dig deeper at why I got
-that I changed the value of code chunk to be `800` and the overlap to `200` and
-I saw an improvement of 13% which was greater than what i expected and I achieved
-the 50% on code.
+Recall@k was very useful as a way to see what to improve.
 
 ### Evaluate function
 

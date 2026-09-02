@@ -105,3 +105,23 @@ def secure_embed(
     except Exception as e:
         print(e, file=sys.stderr)
         sys.exit(1)
+
+
+def source_inside(file_path: Any, sources: list[dict[str, str | int]]) -> bool:
+    """Look if the file_path path is inside sources.
+
+    Parameters:
+    ----------
+    file_path: str
+        the file path to look up.
+    sources: list[dict[str, str | int]]
+        the retrieved sourecs, we use to look up.
+    Returns:
+    -------
+    inside: bool
+        a value that determine if the file_path is inside.
+    """
+    for source in sources:
+        if file_path == source['file_path']:
+            return True
+    return False

@@ -14,6 +14,7 @@ from typing import Any
 from bm25s import Path
 
 from .answer import AnswerEngine
+from .evaluate import EvaluateEngine
 from .index import IndexEngine
 from .search import SearchEngine
 from .semantic import SemanticEngine
@@ -39,6 +40,7 @@ class App:
                 index_dir, chunk_file, semantic_engine
                 )
         self.answer_engine = AnswerEngine(self.search_engine)
+        self.evaludate_engine = EvaluateEngine()
 
     def index(
             self, max_chunk_size: int = 2000,
@@ -123,3 +125,26 @@ the default is `2000`
                 student_search_results_path, dataset_path
                 )
         return response_results
+
+    def evaluate(
+            self, student_search_results_path: str,
+            dataset_path: str
+    ) -> dict[str, float]:
+        """Evaluate search results based on ground truth.
+
+        Doing a simple recal@k calculation on the search results
+        and the ground truth from dataset_path.
+        For our evaluation metric, we'll use recall@1, 3, 5 and 10
+        because that's the get go for a production ready RAG
+        metrics.
+
+        Parameters:
+        ----------
+        student_search_results_path: str
+            the results of the student.
+        dataset_path: str
+            file containing our ground truth.
+        """
+        return self.evaludate_engine.evaluate(
+                student_search_results_path, dataset_path
+                )
